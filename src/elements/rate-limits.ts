@@ -1,8 +1,7 @@
 /**
- * Rate Limits Element: 5h: 32%(2h15m) wk: 18%(4d19h)
+ * Rate Limits Element: 32%(2h15m) │ 18%(4d19h)
  *
- * Labels in plain text, percentages colored by threshold.
- * Reset times in plain parentheses.
+ * Percentages colored by threshold, reset times in parentheses.
  */
 import { C, getColorByPercent } from '../colors.js';
 import { formatResetTime, clamp } from '../utils.js';
@@ -16,7 +15,7 @@ export function renderRateLimitsApi(limits: RateLimits, stale?: boolean): string
   const fh = Math.round(clamp(limits.fiveHourPercent));
   const fhColor = getColorByPercent(fh);
   const fhReset = formatResetTime(limits.fiveHourResetsAt);
-  let fhStr = `5h: ${fhColor(fh + '%')}${staleMarker}`;
+  let fhStr = `${fhColor(fh + '%')}${staleMarker}`;
   if (fhReset) fhStr += ` (${fhReset})`;
   parts.push(fhStr);
 
@@ -25,7 +24,7 @@ export function renderRateLimitsApi(limits: RateLimits, stale?: boolean): string
     const wk = Math.round(clamp(limits.weeklyPercent));
     const wkColor = getColorByPercent(wk);
     const wkReset = formatResetTime(limits.weeklyResetsAt);
-    let wkStr = `wk: ${wkColor(wk + '%')}${staleMarker}`;
+    let wkStr = `${wkColor(wk + '%')}${staleMarker}`;
     if (wkReset) wkStr += ` (${wkReset})`;
     parts.push(wkStr);
   }
@@ -35,7 +34,7 @@ export function renderRateLimitsApi(limits: RateLimits, stale?: boolean): string
     const mo = Math.round(clamp(limits.monthlyPercent));
     const moColor = getColorByPercent(mo);
     const moReset = formatResetTime(limits.monthlyResetsAt);
-    let moStr = `mo: ${moColor(mo + '%')}${staleMarker}`;
+    let moStr = `${moColor(mo + '%')}${staleMarker}`;
     if (moReset) moStr += ` (${moReset})`;
     parts.push(moStr);
   }
@@ -62,13 +61,13 @@ export function renderRateLimitsStdin(limits: {
 
   if (typeof limits.five_hour_percent === 'number') {
     const color = getColorByPercent(limits.five_hour_percent);
-    parts.push(`5h: ${color(limits.five_hour_percent.toFixed(0) + '%')}`);
+    parts.push(`${color(limits.five_hour_percent.toFixed(0) + '%')}`);
   }
 
   if (typeof limits.weekly_percent === 'number') {
     const color = getColorByPercent(limits.weekly_percent);
     const reset = formatResetTime(limits.weekly_resets_at);
-    let part = `wk: ${color(limits.weekly_percent.toFixed(0) + '%')}`;
+    let part = `${color(limits.weekly_percent.toFixed(0) + '%')}`;
     if (reset) part += ` (${reset})`;
     parts.push(part);
   }

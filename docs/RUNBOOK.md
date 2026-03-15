@@ -47,7 +47,7 @@ echo '{}' | npx tsx ~/.meicento-hud/src/index.ts 2>&1 | cat -v
 
 ### Rate limits showing [API 429]
 
-**Cause:** Too many API calls triggered rate limiting. Backoff: 90s → 180s → 300s (max 5min).
+**Cause:** Too many API calls triggered rate limiting. Backoff: 90s -> 180s -> 300s (max 5min).
 
 **Fix:** Wait for backoff to expire (max 5 minutes). If stdin provides `rate_limits`, those are shown as fallback.
 

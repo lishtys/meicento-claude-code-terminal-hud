@@ -25,7 +25,7 @@ Pipe mock JSON to stdin:
 echo '{"model":{"id":"claude-sonnet-4-20250514"},"context_window":{"used_percentage":65,"total_input_tokens":100000,"total_output_tokens":12000},"duration":"45m","mcp":{"servers_count":3}}' | npx tsx src/index.ts
 ```
 
-Verify ANSI color codes are present (important — `picocolors` was replaced with raw ANSI because statusline runs in pipe mode):
+Verify ANSI color codes are present (important — raw ANSI codes are used because statusline runs in pipe mode where `stdout.isTTY` is undefined):
 
 ```bash
 echo '{"model":{"id":"claude-opus-4-6"},"context_window":{"used_percentage":50}}' | npx tsx src/index.ts | cat -v
@@ -42,7 +42,7 @@ echo '{"model":{"id":"claude-opus-4-6"},"context_window":{"used_percentage":92}}
 ## Project Structure
 
 - `src/index.ts` — Entry point: read stdin, fetch data in parallel, render, write stdout
-- `src/colors.ts` — Raw ANSI codes (NOT picocolors — colors must work in pipe mode)
+- `src/colors.ts` — Raw ANSI codes and icon definitions (NOT picocolors — colors must work in pipe mode)
 - `src/render.ts` — 3-line compositor, respects `display` config toggles
 - `src/elements/` — One file per HUD element, each exports a render function
 - `src/usage-api.ts` — OAuth API with Keychain auth, token refresh, 90s polling, backoff
@@ -63,6 +63,8 @@ echo '{"model":{"id":"claude-opus-4-6"},"context_window":{"used_percentage":92}}
 4. **Parallel I/O** — `Promise.all([getUsage(), parseTranscript(), countConfig()])` runs all data fetching concurrently.
 
 5. **Config toggles skip work** — If `showGit: false`, git commands are not executed. If `showUsage: false`, API is not called.
+
+6. **Security-first credential handling** — Uses `execFileSync` (no shell) for Keychain access. Cache and credential files written with restrictive permissions (0o600/0o700).
 
 ## Commit Convention
 

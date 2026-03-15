@@ -7,7 +7,7 @@
  * - macOS: Reads from Keychain "Claude Code-credentials"
  * - Fallback: Reads from ~/.claude/.credentials.json
  *
- * API: api.anthropic.com/api/oauth/usage
+ * API: platform.claude.com/api/oauth/usage
  * Response: { five_hour: { utilization }, seven_day: { utilization } }
  */
 import {
@@ -19,7 +19,7 @@ import {
   mkdirSync,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import https from 'node:https';
 import { clamp } from './utils.js';
@@ -99,13 +99,13 @@ function writeCache(entry: CacheEntry): void {
     const cachePath = getCachePath();
     const cacheDir = dirname(cachePath);
     if (!existsSync(cacheDir)) {
-      mkdirSync(cacheDir, { recursive: true });
+      mkdirSync(cacheDir, { recursive: true, mode: 0o700 });
     }
 
     // Atomic write: tmp + rename
     const tmpPath = `${cachePath}.tmp.${process.pid}`;
     try {
-      writeFileSync(tmpPath, JSON.stringify(entry, null, 2));
+      writeFileSync(tmpPath, JSON.stringify(entry, null, 2), { mode: 0o600 });
       renameSync(tmpPath, cachePath);
     } catch {
       try {
@@ -182,9 +182,10 @@ function readKeychainCredentials(): Credentials | null {
   if (process.platform !== 'darwin') return null;
   try {
     const serviceName = getKeychainServiceName();
-    const result = execSync(
-      `/usr/bin/security find-generic-password -s "${serviceName}" -w 2>/dev/null`,
-      { encoding: 'utf-8', timeout: 2000 },
+    const result = execFileSync(
+      '/usr/bin/security',
+      ['find-generic-password', '-s', serviceName, '-w'],
+      { encoding: 'utf-8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'] },
     ).trim();
     if (!result) return null;
 
@@ -344,7 +345,7 @@ function fetchUsageFromApi(accessToken: string): Promise<{
   return new Promise((resolve) => {
     const req = https.request(
       {
-        hostname: 'api.anthropic.com',
+        hostname: 'platform.claude.com',
         path: '/api/oauth/usage',
         method: 'GET',
         headers: {

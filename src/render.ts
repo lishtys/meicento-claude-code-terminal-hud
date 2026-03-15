@@ -1,7 +1,7 @@
 /**
  * MEICENTO HUD - 3-Line Render Compositor
  *
- * Line 1 (Session):  🤖 Opus 4 │ ██████████░░░░░░░░░░ 45% │ i90K/o25K │ 5h: 32%(2h15m) wk: 18%(4d19h)
+ * Line 1 (Session):  🤖 Opus 4 │ ██████████░░░░░░░░░░ 45% │ i90K/o25K │ 32%(2h15m) │ 18%(4d19h)
  * Line 2 (Stats):    💭 thinking │ 🎯 commit │ T:42 A:3 S:1 │ ▸ 3/7
  * Line 3 (Project):  📁 my-project git:(main*) │ 3 CLAUDE.md │ 12 rules │ 4 MCPs │ ⏱️ 1h23m
  * Optional:          Activity lines (agents, permission, context warning)
