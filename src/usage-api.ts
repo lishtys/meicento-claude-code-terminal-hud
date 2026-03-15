@@ -25,8 +25,8 @@ import https from 'node:https';
 import { clamp } from './utils.js';
 import type { RateLimits, UsageResult } from './types.js';
 
-// Cache configuration
-const CACHE_TTL_SUCCESS_MS = 30 * 1000;
+// Cache configuration (aligned with oh-my-claudecode)
+const CACHE_TTL_SUCCESS_MS = 90 * 1000;       // 90s poll interval (OMC default)
 const CACHE_TTL_FAILURE_MS = 15 * 1000;
 const CACHE_TTL_NETWORK_MS = 2 * 60 * 1000;
 const MAX_RATE_LIMITED_BACKOFF_MS = 5 * 60 * 1000;
