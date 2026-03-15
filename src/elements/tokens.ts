@@ -1,7 +1,8 @@
 /**
  * Tokens Element: i90K/o25K  or  i1.2K/o567 r890 s5.6K
+ *
+ * Token counts in plain text (no dim) for readability.
  */
-import { C } from '../colors.js';
 import { formatValue } from '../utils.js';
 import type { LastRequestTokenUsage } from '../types.js';
 
@@ -26,5 +27,5 @@ export function renderTokens(
     parts.push(`s${formatValue(sessionTotal)}`);
   }
 
-  return C.dim(parts.join(' '));
+  return parts.join(' ');
 }

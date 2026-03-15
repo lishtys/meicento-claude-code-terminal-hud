@@ -1,13 +1,14 @@
 /**
  * Model Element: 🤖 Opus 4
- * Tier coloring: Opus=magenta, Sonnet=yellow, Haiku=green
+ *
+ * Model name displayed in cyan (matching claude-ultimate-hud).
+ * The emoji icon is also part of the cyan coloring.
  */
 import { C, ICONS } from '../colors.js';
 
 export function renderModel(displayName: string, modelId?: string): string {
   const name = modelId ? shortName(modelId) : displayName;
-  const colorFn = tierColor(modelId);
-  return `${ICONS.model} ${colorFn(name)}`;
+  return C.cyan(`${ICONS.model} ${name}`);
 }
 
 function shortName(id: string): string {
@@ -18,13 +19,4 @@ function shortName(id: string): string {
   if (minor && parseInt(minor) >= 2025) return `${tier} ${m[2]}`;
   if (minor) return `${tier} ${m[2]}.${minor}`;
   return `${tier} ${m[2]}`;
-}
-
-function tierColor(id?: string): (s: string) => string {
-  if (!id) return C.cyan;
-  const l = id.toLowerCase();
-  if (l.includes('opus')) return C.magenta;
-  if (l.includes('sonnet')) return C.yellow;
-  if (l.includes('haiku')) return C.green;
-  return C.cyan;
 }

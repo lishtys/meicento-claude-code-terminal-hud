@@ -1,5 +1,13 @@
 /**
  * MEICENTO HUD - Colors, Icons & Helpers
+ *
+ * Color scheme based on claude-ultimate-hud:
+ * - Cyan: model name, skills, tool names, git branch
+ * - Yellow: project dir, running indicators, warnings
+ * - Green: completed indicators, healthy metrics
+ * - Red: critical metrics, danger warnings
+ * - Magenta: thinking state, git delimiters, agent types
+ * - Dim: separators, secondary info, counts, durations
  */
 import pc from 'picocolors';
 
@@ -34,16 +42,14 @@ export function sep(): string {
   return ` ${C.dim('│')} `;
 }
 
-/** Context bar color: green < 70%, yellow 70-84%, red >= 85% */
-export function getBarColor(percent: number): (s: string) => string {
-  if (percent >= 85) return C.red;
-  if (percent >= 70) return C.yellow;
-  return C.green;
-}
-
-/** Usage/rate limit color: green < 50%, yellow 50-79%, red >= 80% */
-export function getUsageColor(percent: number): (s: string) => string {
-  if (percent >= 80) return C.red;
-  if (percent >= 50) return C.yellow;
+/**
+ * Color by percentage thresholds (matching claude-ultimate-hud):
+ *   0-50%  = green
+ *  51-80%  = yellow
+ *  81-100% = red
+ */
+export function getColorByPercent(percent: number): (s: string) => string {
+  if (percent > 80) return C.red;
+  if (percent > 50) return C.yellow;
   return C.green;
 }

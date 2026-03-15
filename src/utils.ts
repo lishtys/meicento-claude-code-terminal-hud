@@ -1,11 +1,11 @@
 /**
  * MEICENTO HUD - Utility Functions
  */
-import { C, getBarColor } from './colors.js';
+import { C, getColorByPercent } from './colors.js';
 
 export function formatValue(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  if (n >= 950_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
   return n.toString();
 }
 
@@ -13,7 +13,7 @@ export function renderBar(percent: number, width: number = 10): string {
   const clamped = Math.max(0, Math.min(100, Math.round(percent)));
   const filled = Math.round((clamped / 100) * width);
   const empty = width - filled;
-  const colorFn = getBarColor(clamped);
+  const colorFn = getColorByPercent(clamped);
   return colorFn('█'.repeat(filled)) + C.dim('░'.repeat(empty));
 }
 

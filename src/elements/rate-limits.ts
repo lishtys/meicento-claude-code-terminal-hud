@@ -1,40 +1,46 @@
 /**
  * Rate Limits Element: 5h: 32%(2h15m) wk: 18%(4d19h)
+ *
+ * Labels in plain text, percentages colored by threshold.
+ * Reset times in plain parentheses.
  */
-import { C, getUsageColor } from '../colors.js';
+import { C, getColorByPercent } from '../colors.js';
 import { formatResetTime, clamp } from '../utils.js';
 import type { RateLimits, UsageResult } from '../types.js';
 
 export function renderRateLimitsApi(limits: RateLimits, stale?: boolean): string {
   const parts: string[] = [];
-  const staleMarker = stale ? C.dim('*') : '';
+  const staleMarker = stale ? '*' : '';
 
   // 5-hour
   const fh = Math.round(clamp(limits.fiveHourPercent));
-  const fhColor = getUsageColor(fh);
+  const fhColor = getColorByPercent(fh);
   const fhReset = formatResetTime(limits.fiveHourResetsAt);
-  const fhResetStr = fhReset ? C.dim(`(${fhReset})`) : '';
-  parts.push(`${C.dim('5h:')} ${fhColor(fh + '%')}${staleMarker}${fhResetStr}`);
+  let fhStr = `5h: ${fhColor(fh + '%')}${staleMarker}`;
+  if (fhReset) fhStr += ` (${fhReset})`;
+  parts.push(fhStr);
 
   // Weekly
   if (limits.weeklyPercent != null) {
     const wk = Math.round(clamp(limits.weeklyPercent));
-    const wkColor = getUsageColor(wk);
+    const wkColor = getColorByPercent(wk);
     const wkReset = formatResetTime(limits.weeklyResetsAt);
-    const wkResetStr = wkReset ? C.dim(`(${wkReset})`) : '';
-    parts.push(`${C.dim('wk:')} ${wkColor(wk + '%')}${staleMarker}${wkResetStr}`);
+    let wkStr = `wk: ${wkColor(wk + '%')}${staleMarker}`;
+    if (wkReset) wkStr += ` (${wkReset})`;
+    parts.push(wkStr);
   }
 
   // Monthly
   if (limits.monthlyPercent != null) {
     const mo = Math.round(clamp(limits.monthlyPercent));
-    const moColor = getUsageColor(mo);
+    const moColor = getColorByPercent(mo);
     const moReset = formatResetTime(limits.monthlyResetsAt);
-    const moResetStr = moReset ? C.dim(`(${moReset})`) : '';
-    parts.push(`${C.dim('mo:')} ${moColor(mo + '%')}${staleMarker}${moResetStr}`);
+    let moStr = `mo: ${moColor(mo + '%')}${staleMarker}`;
+    if (moReset) moStr += ` (${moReset})`;
+    parts.push(moStr);
   }
 
-  return parts.join(' ');
+  return parts.join(C.dim(' │ '));
 }
 
 export function renderRateLimitsError(result: UsageResult): string | null {
@@ -55,16 +61,17 @@ export function renderRateLimitsStdin(limits: {
   const parts: string[] = [];
 
   if (typeof limits.five_hour_percent === 'number') {
-    const color = getUsageColor(limits.five_hour_percent);
-    parts.push(`${C.dim('5h:')} ${color(limits.five_hour_percent.toFixed(0) + '%')}`);
+    const color = getColorByPercent(limits.five_hour_percent);
+    parts.push(`5h: ${color(limits.five_hour_percent.toFixed(0) + '%')}`);
   }
 
   if (typeof limits.weekly_percent === 'number') {
-    const color = getUsageColor(limits.weekly_percent);
+    const color = getColorByPercent(limits.weekly_percent);
     const reset = formatResetTime(limits.weekly_resets_at);
-    const resetStr = reset ? C.dim(`(${reset})`) : '';
-    parts.push(`${C.dim('wk:')} ${color(limits.weekly_percent.toFixed(0) + '%')}${resetStr}`);
+    let part = `wk: ${color(limits.weekly_percent.toFixed(0) + '%')}`;
+    if (reset) part += ` (${reset})`;
+    parts.push(part);
   }
 
-  return parts.length > 0 ? parts.join(' ') : null;
+  return parts.length > 0 ? parts.join(C.dim(' │ ')) : null;
 }
