@@ -1,7 +1,7 @@
 {
   "name": "meicento-claude-code-terminal-hud",
-  "version": "1.0.0",
-  "description": "A refined, Gruvbox-themed Claude Code status line HUD.",
+  "version": "2.0.0",
+  "description": "3-line status HUD for Claude Code with rate limits, transcript parsing, and git status.",
   "main": "src/index.ts",
   "bin": {
     "meicento-hud": "src/index.ts"
@@ -17,7 +17,8 @@
     "hud",
     "status-line",
     "terminal",
-    "gruvbox"
+    "rate-limits",
+    "transcript"
   ],
   "author": "meicento",
   "license": "MIT",
