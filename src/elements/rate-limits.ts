@@ -1,105 +1,70 @@
 /**
- * MEICENTO HUD - Rate Limits Element
- *
- * Supports two modes:
- * 1. API-sourced with progress bars: 5h:[████░░░░]45%(3h42m) wk:[█░░░░░░░]12%(2d5h)
- * 2. Stdin-sourced text-only fallback: 5h:45% wk:12%(2d5h)
+ * Rate Limits Element: 5h: 32%(2h15m) wk: 18%(4d19h)
  */
-import { c, ICONS, getThresholdColor } from '../colors.js';
+import { C, getUsageColor } from '../colors.js';
 import { formatResetTime, clamp } from '../utils.js';
 import type { RateLimits, UsageResult } from '../types.js';
 
-const BAR_WIDTH = 8;
-
-/**
- * Render a single rate limit bucket with a progress bar
- */
-function renderBucketWithBar(
-  label: string,
-  percent: number,
-  resetsAt?: Date | null,
-  stale?: boolean,
-): string {
-  const pct = clamp(percent);
-  const rounded = Math.round(pct);
-  const colorFn = getThresholdColor(rounded);
-
-  const filled = Math.round((rounded / 100) * BAR_WIDTH);
-  const empty = BAR_WIDTH - filled;
-  const bar = colorFn('█'.repeat(filled)) + c.dim('░'.repeat(empty));
-
-  const staleMarker = stale ? c.dim('*') : '';
-  const resetStr = resetsAt ? formatResetTime(resetsAt) : null;
-  const resetPart = resetStr ? c.dim(`(${stale ? '~' : ''}${resetStr})`) : '';
-
-  return `${c.dim(label + ':')}[${bar}]${colorFn(rounded + '%')}${staleMarker}${resetPart}`;
-}
-
-/**
- * Render rate limits with progress bars (API-sourced data)
- */
-export function renderRateLimitsWithBar(limits: RateLimits, stale?: boolean): string {
+export function renderRateLimitsApi(limits: RateLimits, stale?: boolean): string {
   const parts: string[] = [];
+  const staleMarker = stale ? C.dim('*') : '';
 
-  parts.push(renderBucketWithBar('5h', limits.fiveHourPercent, limits.fiveHourResetsAt, stale));
+  // 5-hour
+  const fh = Math.round(clamp(limits.fiveHourPercent));
+  const fhColor = getUsageColor(fh);
+  const fhReset = formatResetTime(limits.fiveHourResetsAt);
+  const fhResetStr = fhReset ? C.dim(`(${fhReset})`) : '';
+  parts.push(`${C.dim('5h:')} ${fhColor(fh + '%')}${staleMarker}${fhResetStr}`);
 
+  // Weekly
   if (limits.weeklyPercent != null) {
-    parts.push(renderBucketWithBar('wk', limits.weeklyPercent, limits.weeklyResetsAt, stale));
+    const wk = Math.round(clamp(limits.weeklyPercent));
+    const wkColor = getUsageColor(wk);
+    const wkReset = formatResetTime(limits.weeklyResetsAt);
+    const wkResetStr = wkReset ? C.dim(`(${wkReset})`) : '';
+    parts.push(`${C.dim('wk:')} ${wkColor(wk + '%')}${staleMarker}${wkResetStr}`);
   }
 
+  // Monthly
   if (limits.monthlyPercent != null) {
-    parts.push(renderBucketWithBar('mo', limits.monthlyPercent, limits.monthlyResetsAt, stale));
+    const mo = Math.round(clamp(limits.monthlyPercent));
+    const moColor = getUsageColor(mo);
+    const moReset = formatResetTime(limits.monthlyResetsAt);
+    const moResetStr = moReset ? C.dim(`(${moReset})`) : '';
+    parts.push(`${C.dim('mo:')} ${moColor(mo + '%')}${staleMarker}${moResetStr}`);
   }
 
   return parts.join(' ');
 }
 
-/**
- * Render error indicator for failed API calls
- */
 export function renderRateLimitsError(result: UsageResult): string | null {
   if (!result.error) return null;
   if (result.error === 'no_credentials') return null;
-
-  if (result.error === 'rate_limited') {
-    return result.rateLimits ? null : c.dim('[API 429]');
-  }
-  if (result.error === 'auth') return c.yellow('[API auth]');
-  return c.yellow('[API err]');
+  if (result.error === 'rate_limited') return result.rateLimits ? null : C.dim('[API 429]');
+  if (result.error === 'auth') return C.yellow('[API auth]');
+  return C.yellow('[API err]');
 }
 
-/**
- * Render rate limits from stdin data (text-only fallback)
- */
-export function renderRateLimitsFromStdin(limits: {
+export function renderRateLimitsStdin(limits: {
   five_hour_percent?: number;
   weekly_percent?: number;
   weekly_resets_at?: string;
 } | null): string | null {
-  if (!limits || (!limits.five_hour_percent && !limits.weekly_percent)) {
-    return null;
-  }
+  if (!limits || (!limits.five_hour_percent && !limits.weekly_percent)) return null;
 
   const parts: string[] = [];
-  const fiveHour = limits.five_hour_percent;
-  const weekly = limits.weekly_percent;
 
-  if (typeof fiveHour === 'number') {
-    const color = getThresholdColor(fiveHour);
-    parts.push(`5h:${color(fiveHour.toFixed(0) + '%')}`);
+  if (typeof limits.five_hour_percent === 'number') {
+    const color = getUsageColor(limits.five_hour_percent);
+    parts.push(`${C.dim('5h:')} ${color(limits.five_hour_percent.toFixed(0) + '%')}`);
   }
 
-  if (typeof weekly === 'number') {
-    const color = getThresholdColor(weekly);
+  if (typeof limits.weekly_percent === 'number') {
+    const color = getUsageColor(limits.weekly_percent);
     const reset = formatResetTime(limits.weekly_resets_at);
-    let part = `wk:${color(weekly.toFixed(0) + '%')}`;
-    if (reset) {
-      part += c.dim(`(${reset})`);
-    }
-    parts.push(part);
+    const resetStr = reset ? C.dim(`(${reset})`) : '';
+    parts.push(`${C.dim('wk:')} ${color(limits.weekly_percent.toFixed(0) + '%')}${resetStr}`);
   }
 
-  if (parts.length === 0) return null;
-
-  return `${c.dim(ICONS.limits + ' ')}${parts.join(' ')}`;
+  return parts.length > 0 ? parts.join(' ') : null;
 }

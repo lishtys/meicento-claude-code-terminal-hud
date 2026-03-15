@@ -1,15 +1,16 @@
 /**
- * MEICENTO HUD - Context Warning Element
- *
- * Shows warning when context >= 80%:
- * [!] ctx 85% >= 80% - run /compact
+ * Context Warning Element:
+ * ⚠️  Context 85% - consider /compact
+ * 🔴 Context 95% - /compact recommended!
  */
-import { c } from '../colors.js';
+import { C, ICONS } from '../colors.js';
 
-const CONTEXT_WARNING_THRESHOLD = 80;
-
-export function renderContextWarning(contextPercent: number): string | null {
-  if (contextPercent < CONTEXT_WARNING_THRESHOLD) return null;
-
-  return c.red(`[!] ctx ${Math.round(contextPercent)}% >= ${CONTEXT_WARNING_THRESHOLD}% - run /compact`);
+export function renderContextWarning(percent: number): string | null {
+  if (percent >= 90) {
+    return `${ICONS.critical} ${C.red(`Context ${Math.round(percent)}% - /compact recommended!`)}`;
+  }
+  if (percent >= 80) {
+    return `${ICONS.warning} ${C.yellow(`Context ${Math.round(percent)}% - consider /compact`)}`;
+  }
+  return null;
 }

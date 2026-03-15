@@ -1,51 +1,49 @@
 /**
- * MEICENTO HUD - Color Palette & Icons
+ * MEICENTO HUD - Colors, Icons & Helpers
  */
 import pc from 'picocolors';
 
-export const c = {
-  // Base
-  reset: (s: string) => pc.reset(s),
-  bold: (s: string) => pc.bold(s),
-  dim: (s: string) => pc.dim(s),
-
-  // Colors
-  red: (s: string) => pc.red(s),
-  green: (s: string) => pc.green(s),
-  yellow: (s: string) => pc.yellow(s),
-  blue: (s: string) => pc.blue(s),
-  magenta: (s: string) => pc.magenta(s),
-  cyan: (s: string) => pc.cyan(s),
-  gray: (s: string) => pc.gray(s),
-
-  // Semantic
-  model: (s: string) => pc.bold(pc.blue(s)),
-  token: (s: string) => pc.cyan(s),
-  dir: (s: string) => pc.magenta(s),
-  repo: (s: string) => pc.cyan(s),
-  git: (s: string) => pc.yellow(s),
-  time: (s: string) => pc.green(s),
-  mcp: (s: string) => pc.red(s),
-  tag: (s: string) => pc.bold(pc.magenta(s)),
+export const C = {
+  reset: pc.reset,
+  bold: pc.bold,
+  dim: pc.dim,
+  red: pc.red,
+  green: pc.green,
+  yellow: pc.yellow,
+  blue: pc.blue,
+  magenta: pc.magenta,
+  cyan: pc.cyan,
+  gray: pc.gray,
 };
 
 export const ICONS = {
-  model: '󰚩',
-  token: '󰌠',
-  dir: '󰉖',
-  repo: '󰋚',
-  git: '󰊢',
-  time: '󱑎',
-  mcp: '󰒋',
-  limits: 'limits',
-  sep: '│',
+  model: '🤖',
+  folder: '📁',
+  timer: '⏱️',
+  thinking: '💭',
+  skill: '🎯',
+  warning: '⚠️',
+  critical: '🔴',
+  running: '◐',
+  completed: '✓',
+  todo: '▸',
 };
 
-const WARNING_THRESHOLD = 70;
-const CRITICAL_THRESHOLD = 90;
+/** Dim vertical bar separator */
+export function sep(): string {
+  return ` ${C.dim('│')} `;
+}
 
-export function getThresholdColor(percent: number): (s: string) => string {
-  if (percent >= CRITICAL_THRESHOLD) return c.red;
-  if (percent >= WARNING_THRESHOLD) return c.yellow;
-  return c.green;
+/** Context bar color: green < 70%, yellow 70-84%, red >= 85% */
+export function getBarColor(percent: number): (s: string) => string {
+  if (percent >= 85) return C.red;
+  if (percent >= 70) return C.yellow;
+  return C.green;
+}
+
+/** Usage/rate limit color: green < 50%, yellow 50-79%, red >= 80% */
+export function getUsageColor(percent: number): (s: string) => string {
+  if (percent >= 80) return C.red;
+  if (percent >= 50) return C.yellow;
+  return C.green;
 }

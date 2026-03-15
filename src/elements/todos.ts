@@ -1,9 +1,7 @@
 /**
- * MEICENTO HUD - Todo Completion Element
- *
- * Format: todos:2/5 with color based on completion %
+ * Todos Element: ▸ 3/7  or  ✓ 7/7
  */
-import { c, getThresholdColor } from '../colors.js';
+import { C, ICONS } from '../colors.js';
 import type { TodoItem } from '../types.js';
 
 export function renderTodos(todos: TodoItem[]): string | null {
@@ -11,10 +9,10 @@ export function renderTodos(todos: TodoItem[]): string | null {
 
   const completed = todos.filter(t => t.status === 'completed').length;
   const total = todos.length;
-  const percent = (completed / total) * 100;
 
-  // Invert: high completion = green, low = red
-  const colorFn = percent >= 90 ? c.green : percent >= 50 ? c.yellow : c.red;
+  if (completed === total) {
+    return `${C.green(ICONS.completed)} ${C.green(`${completed}/${total}`)}`;
+  }
 
-  return colorFn(`todos:${completed}/${total}`);
+  return `${C.yellow(ICONS.todo)} ${C.dim(`${completed}/${total}`)}`;
 }

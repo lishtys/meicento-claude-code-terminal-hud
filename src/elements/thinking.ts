@@ -1,12 +1,10 @@
 /**
- * MEICENTO HUD - Thinking Indicator Element
- *
- * Shows when extended thinking was seen within last 30s
+ * Thinking Element: 💭 thinking
  */
-import { c } from '../colors.js';
+import { C, ICONS } from '../colors.js';
 import type { ThinkingState } from '../types.js';
 
 export function renderThinking(state: ThinkingState | undefined): string | null {
   if (!state?.active) return null;
-  return c.cyan('thinking');
+  return `${ICONS.thinking} ${C.magenta('thinking')}`;
 }

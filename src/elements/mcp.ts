@@ -1,9 +1,8 @@
 /**
- * MEICENTO HUD - MCP Server Count Element
+ * MCP count - used inline in project line config counts
  */
-import { c, ICONS } from '../colors.js';
 
-export function renderMcp(count: number): string | null {
-  if (count <= 0) return null;
-  return c.mcp(`${ICONS.mcp} ${count}`);
+export function renderMcpCount(): null {
+  // MCP count is now rendered inline in the project line via configCounts
+  return null;
 }

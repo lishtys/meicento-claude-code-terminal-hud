@@ -1,27 +1,8 @@
 /**
- * MEICENTO HUD - Git Info Element
+ * Git Element: git:(main*) oh-my-zsh style
  */
 import { execSync } from 'node:child_process';
-import { c, ICONS } from '../colors.js';
-
-export function getGitRepoName(cwd?: string): string | null {
-  try {
-    const url = execSync('git remote get-url origin', {
-      cwd,
-      encoding: 'utf-8',
-      timeout: 1000,
-      stdio: ['ignore', 'pipe', 'ignore'],
-      shell: process.platform === 'win32' ? 'cmd.exe' : undefined,
-    }).trim();
-
-    if (!url) return null;
-
-    const match = url.match(/\/([^/]+?)(?:\.git)?$/) || url.match(/:([^/]+?)(?:\.git)?$/);
-    return match ? match[1].replace(/\.git$/, '') : null;
-  } catch {
-    return null;
-  }
-}
+import { C } from '../colors.js';
 
 export function getGitBranch(cwd?: string): string | null {
   try {
@@ -30,26 +11,28 @@ export function getGitBranch(cwd?: string): string | null {
       encoding: 'utf-8',
       timeout: 1000,
       stdio: ['ignore', 'pipe', 'ignore'],
-      shell: process.platform === 'win32' ? 'cmd.exe' : undefined,
-    }).trim();
+    }).trim() || null;
   } catch {
     return null;
   }
 }
 
-export function renderGitInfo(
-  workingDir: string,
-  repoName: string | null,
-  branch: string | null,
-): string {
-  const parts: string[] = [];
-  parts.push(c.dir(`${ICONS.dir} ${workingDir}`));
+export function isGitDirty(cwd?: string): boolean {
+  try {
+    const out = execSync('git status --porcelain', {
+      cwd,
+      encoding: 'utf-8',
+      timeout: 1000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return out.length > 0;
+  } catch {
+    return false;
+  }
+}
 
-  if (repoName) {
-    parts.push(c.repo(`(${ICONS.repo} ${repoName})`));
-  }
-  if (branch) {
-    parts.push(c.git(`(${ICONS.git} ${branch})`));
-  }
-  return parts.join(' ');
+export function renderGit(branch: string | null, dirty: boolean): string | null {
+  if (!branch) return null;
+  const branchStr = dirty ? `${branch}*` : branch;
+  return `${C.magenta('git:(')}${C.cyan(branchStr)}${C.magenta(')')}`;
 }

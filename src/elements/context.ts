@@ -1,8 +1,11 @@
 /**
- * MEICENTO HUD - Context Progress Bar Element
+ * Context Element: ██████████░░░░░░░░░░ 45%
  */
-import { renderProgressBar } from '../utils.js';
+import { getBarColor } from '../colors.js';
+import { renderBar } from '../utils.js';
 
-export function renderContext(percentage: number): string {
-  return renderProgressBar(percentage);
+export function renderContext(percent: number): string {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  const colorFn = getBarColor(clamped);
+  return `${renderBar(clamped)} ${colorFn(clamped + '%')}`;
 }

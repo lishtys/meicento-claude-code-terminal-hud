@@ -87,6 +87,13 @@ export interface TranscriptData {
   pendingPermission?: PendingPermission;
 }
 
+export interface ConfigCounts {
+  claudeMd: number;
+  rules: number;
+  mcps: number;
+  hooks: number;
+}
+
 export interface HudRenderContext {
   model: string;
   modelId?: string;
@@ -98,13 +105,10 @@ export interface HudRenderContext {
   workingDir: string;
   repoName: string | null;
   branch: string | null;
+  gitDirty: boolean;
 
-  // Usage API data (Phase 1)
   usageResult?: UsageResult;
-
-  // Stdin rate limits (fallback)
   stdinRateLimits?: StatuslineStdin['rate_limits'];
-
-  // Transcript data (Phase 2)
   transcript?: TranscriptData;
+  configCounts?: ConfigCounts;
 }
