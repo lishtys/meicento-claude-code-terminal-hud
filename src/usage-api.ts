@@ -59,7 +59,8 @@ interface CacheEntry {
 
 function getCachePath(): string {
   const homeDir = process.env.HOME || process.env.USERPROFILE || '~';
-  return join(homeDir, '.meicento-hud', '.usage-cache.json');
+  // Store cache outside install dir so reinstalls don't wipe it
+  return join(homeDir, '.cache', 'meicento-hud', '.usage-cache.json');
 }
 
 function getClaudeConfigDir(): string {

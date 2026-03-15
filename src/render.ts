@@ -176,15 +176,20 @@ function buildActivityLines(ctx: HudRenderContext): string[] {
 // ── Helpers ──────────────────────────────────────────────────
 
 function buildLimits(ctx: HudRenderContext): string | null {
-  if (ctx.usageResult) {
-    if (ctx.usageResult.rateLimits) {
-      return renderRateLimitsApi(ctx.usageResult.rateLimits, ctx.usageResult.stale);
-    }
-    const err = renderRateLimitsError(ctx.usageResult);
-    if (err) return err;
+  // API data available and successful
+  if (ctx.usageResult?.rateLimits) {
+    return renderRateLimitsApi(ctx.usageResult.rateLimits, ctx.usageResult.stale);
   }
+
+  // API failed — fall back to stdin rate limits if available
   if (ctx.stdinRateLimits) {
     return renderRateLimitsStdin(ctx.stdinRateLimits);
   }
+
+  // No stdin fallback — show API error indicator
+  if (ctx.usageResult) {
+    return renderRateLimitsError(ctx.usageResult);
+  }
+
   return null;
 }
