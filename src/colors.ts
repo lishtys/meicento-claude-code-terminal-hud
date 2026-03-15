@@ -1,6 +1,10 @@
 /**
  * MEICENTO HUD - Colors, Icons & Helpers
  *
+ * Uses raw ANSI escape codes instead of picocolors because
+ * the statusline output goes through a pipe (not TTY),
+ * and color libraries like picocolors auto-disable colors.
+ *
  * Color scheme based on claude-ultimate-hud:
  * - Cyan: model name, skills, tool names, git branch
  * - Yellow: project dir, running indicators, warnings
@@ -9,19 +13,30 @@
  * - Magenta: thinking state, git delimiters, agent types
  * - Dim: separators, secondary info, counts, durations
  */
-import pc from 'picocolors';
+
+const RESET = '\x1b[0m';
+const DIM = '\x1b[2m';
+const CYAN = '\x1b[36m';
+const GREEN = '\x1b[32m';
+const YELLOW = '\x1b[33m';
+const RED = '\x1b[31m';
+const MAGENTA = '\x1b[35m';
+
+function wrap(color: string): (s: string) => string {
+  return (s: string) => `${color}${s}${RESET}`;
+}
 
 export const C = {
-  reset: pc.reset,
-  bold: pc.bold,
-  dim: pc.dim,
-  red: pc.red,
-  green: pc.green,
-  yellow: pc.yellow,
-  blue: pc.blue,
-  magenta: pc.magenta,
-  cyan: pc.cyan,
-  gray: pc.gray,
+  reset: wrap(RESET),
+  bold: (s: string) => `\x1b[1m${s}${RESET}`,
+  dim: wrap(DIM),
+  red: wrap(RED),
+  green: wrap(GREEN),
+  yellow: wrap(YELLOW),
+  blue: wrap('\x1b[34m'),
+  magenta: wrap(MAGENTA),
+  cyan: wrap(CYAN),
+  gray: wrap(DIM),
 };
 
 export const ICONS = {
@@ -39,7 +54,7 @@ export const ICONS = {
 
 /** Dim vertical bar separator */
 export function sep(): string {
-  return ` ${C.dim('│')} `;
+  return ` ${DIM}│${RESET} `;
 }
 
 /**
