@@ -5,6 +5,8 @@
  * Line 2 (Stats):    💭 thinking │ 🎯 commit │ T:42 A:3 S:1 │ ▸ 3/7
  * Line 3 (Project):  📁 my-project git:(main*) │ 3 CLAUDE.md │ 12 rules │ 4 MCPs │ ⏱️ 1h23m
  * Optional:          Activity lines (agents, permission, context warning)
+ *
+ * All elements respect display config toggles.
  */
 import { C, ICONS, sep } from './colors.js';
 import type { HudRenderContext } from './types.js';
@@ -26,67 +28,77 @@ export function render(ctx: HudRenderContext): string {
   const lines: string[] = [];
 
   lines.push(buildSessionLine(ctx));
+
   const statsLine = buildStatsLine(ctx);
   if (statsLine) lines.push(statsLine);
-  lines.push(buildProjectLine(ctx));
 
-  // Optional activity lines
+  const projectLine = buildProjectLine(ctx);
+  if (projectLine) lines.push(projectLine);
+
   const extras = buildActivityLines(ctx);
   lines.push(...extras);
 
   return lines.join('\n');
 }
 
-// ── Line 1: Session ──────────────────────────────────────────
+// ── Line 1: Session (always shown) ──────────────────────────
 
 function buildSessionLine(ctx: HudRenderContext): string {
   const parts: string[] = [];
+  const d = ctx.display;
 
-  // Model
+  // Model (always shown)
   parts.push(renderModel(ctx.model, ctx.modelId));
 
-  // Context bar + percentage
+  // Context bar (always shown)
   parts.push(renderContext(ctx.contextUsage));
 
   // Tokens
-  parts.push(renderTokens(
-    ctx.totalInput,
-    ctx.totalOutput,
-    ctx.transcript?.lastRequestTokenUsage,
-    ctx.transcript?.sessionTotalTokens,
-  ));
+  if (d.showTokens) {
+    parts.push(renderTokens(
+      ctx.totalInput,
+      ctx.totalOutput,
+      ctx.transcript?.lastRequestTokenUsage,
+      ctx.transcript?.sessionTotalTokens,
+    ));
+  }
 
-  // Rate limits (API-first, stdin fallback)
-  const limits = buildLimits(ctx);
-  if (limits) parts.push(limits);
+  // Rate limits
+  if (d.showUsage) {
+    const limits = buildLimits(ctx);
+    if (limits) parts.push(limits);
+  }
 
   return parts.join(sep());
 }
 
-// ── Line 2: Stats ────────────────────────────────────────────
+// ── Line 2: Stats (only if transcript data and any element enabled) ──
 
 function buildStatsLine(ctx: HudRenderContext): string | null {
   const t = ctx.transcript;
   if (!t) return null;
 
+  const d = ctx.display;
   const parts: string[] = [];
 
-  // Thinking
-  const thinking = renderThinking(t.thinkingState);
-  if (thinking) parts.push(thinking);
+  if (d.showThinking) {
+    const thinking = renderThinking(t.thinkingState);
+    if (thinking) parts.push(thinking);
+  }
 
-  // Last skill
-  if (t.lastActivatedSkill) {
+  if (d.showSkills && t.lastActivatedSkill) {
     parts.push(`${ICONS.skill} ${C.cyan(t.lastActivatedSkill.name)}`);
   }
 
-  // Call counts
-  const counts = renderCallCounts(t.toolCallCount, t.agentCallCount, t.skillCallCount);
-  if (counts) parts.push(counts);
+  if (d.showCallCounts) {
+    const counts = renderCallCounts(t.toolCallCount, t.agentCallCount, t.skillCallCount);
+    if (counts) parts.push(counts);
+  }
 
-  // Todos
-  const todos = renderTodos(t.todos);
-  if (todos) parts.push(todos);
+  if (d.showTodos) {
+    const todos = renderTodos(t.todos);
+    if (todos) parts.push(todos);
+  }
 
   if (parts.length === 0) return null;
   return parts.join(sep());
@@ -94,16 +106,27 @@ function buildStatsLine(ctx: HudRenderContext): string | null {
 
 // ── Line 3: Project ──────────────────────────────────────────
 
-function buildProjectLine(ctx: HudRenderContext): string {
+function buildProjectLine(ctx: HudRenderContext): string | null {
+  const d = ctx.display;
+
+  // If project display is off, skip entire line
+  if (!d.showProject && !d.showDuration) return null;
+
   const parts: string[] = [];
 
   // Directory + git
-  const dirPart = `${ICONS.folder} ${C.yellow(ctx.workingDir)}`;
-  const gitPart = renderGit(ctx.branch, ctx.gitDirty);
-  parts.push(gitPart ? `${dirPart} ${gitPart}` : dirPart);
+  if (d.showProject) {
+    const dirPart = `${ICONS.folder} ${C.yellow(ctx.workingDir)}`;
+    if (d.showGit) {
+      const gitPart = renderGit(ctx.branch, ctx.gitDirty);
+      parts.push(gitPart ? `${dirPart} ${gitPart}` : dirPart);
+    } else {
+      parts.push(dirPart);
+    }
+  }
 
   // Config counts
-  if (ctx.configCounts) {
+  if (d.showConfigCounts && ctx.configCounts) {
     const cc = ctx.configCounts;
     const cfgParts: string[] = [];
     if (cc.claudeMd > 0) cfgParts.push(`${cc.claudeMd} CLAUDE.md`);
@@ -116,10 +139,11 @@ function buildProjectLine(ctx: HudRenderContext): string {
   }
 
   // Session timer
-  if (ctx.duration) {
+  if (d.showDuration && ctx.duration) {
     parts.push(renderSession(ctx.duration));
   }
 
+  if (parts.length === 0) return null;
   return parts.join(sep());
 }
 
@@ -127,22 +151,24 @@ function buildProjectLine(ctx: HudRenderContext): string {
 
 function buildActivityLines(ctx: HudRenderContext): string[] {
   const lines: string[] = [];
+  const d = ctx.display;
 
   // Agent activity
-  if (ctx.transcript?.agents.length) {
-    const agentLines = renderAgentLines(ctx.transcript.agents);
-    lines.push(...agentLines);
+  if (d.showAgents && ctx.transcript?.agents.length) {
+    lines.push(...renderAgentLines(ctx.transcript.agents));
   }
 
   // Permission pending
-  if (ctx.transcript?.pendingPermission) {
+  if (d.showPermission && ctx.transcript?.pendingPermission) {
     const perm = renderPermission(ctx.transcript.pendingPermission);
     if (perm) lines.push(perm);
   }
 
   // Context warning
-  const warning = renderContextWarning(ctx.contextUsage);
-  if (warning) lines.push(warning);
+  if (d.showContextWarning) {
+    const warning = renderContextWarning(ctx.contextUsage);
+    if (warning) lines.push(warning);
+  }
 
   return lines;
 }

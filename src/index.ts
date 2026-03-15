@@ -11,6 +11,7 @@ import { readStdin, getContextPercent, getModelName, getModelId } from './stdin.
 import { getUsage } from './usage-api.js';
 import { parseTranscript } from './transcript.js';
 import { countConfig } from './config-counter.js';
+import { loadConfig } from './config.js';
 import { render } from './render.js';
 import { getGitBranch, isGitDirty } from './elements/git.js';
 import type { HudRenderContext } from './types.js';
@@ -21,9 +22,10 @@ async function main(): Promise<void> {
     if (!data) return;
 
     const mcpCount = data.mcp?.servers_count || 0;
+    const config = loadConfig();
 
     const [usageResult, transcript, configCounts] = await Promise.all([
-      getUsage().catch(() => undefined),
+      config.display.showUsage ? getUsage().catch(() => undefined) : Promise.resolve(undefined),
       parseTranscript(data.transcript_path).catch(() => undefined),
       Promise.resolve(countConfig(mcpCount)),
     ]);
@@ -38,12 +40,13 @@ async function main(): Promise<void> {
       mcpCount,
       workingDir: path.basename(process.cwd()),
       repoName: null,
-      branch: getGitBranch(),
-      gitDirty: isGitDirty(),
+      branch: config.display.showGit ? getGitBranch() : null,
+      gitDirty: config.display.showGit && config.gitStatus.showDirty ? isGitDirty() : false,
       usageResult,
       stdinRateLimits: data.rate_limits,
       transcript,
       configCounts,
+      display: config.display,
     };
 
     process.stdout.write(render(ctx) + '\n');

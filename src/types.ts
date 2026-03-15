@@ -94,6 +94,22 @@ export interface ConfigCounts {
   hooks: number;
 }
 
+export interface HudDisplayConfig {
+  showTokens: boolean;
+  showUsage: boolean;
+  showThinking: boolean;
+  showSkills: boolean;
+  showCallCounts: boolean;
+  showTodos: boolean;
+  showProject: boolean;
+  showGit: boolean;
+  showConfigCounts: boolean;
+  showDuration: boolean;
+  showAgents: boolean;
+  showContextWarning: boolean;
+  showPermission: boolean;
+}
+
 export interface HudRenderContext {
   model: string;
   modelId?: string;
@@ -111,4 +127,5 @@ export interface HudRenderContext {
   stdinRateLimits?: StatuslineStdin['rate_limits'];
   transcript?: TranscriptData;
   configCounts?: ConfigCounts;
+  display: HudDisplayConfig;
 }
