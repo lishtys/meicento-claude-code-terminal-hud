@@ -23,7 +23,7 @@ Inspired by the [OMC](https://github.com/anthropics/omc) project and other commu
 Run the following command in your terminal to install and configure automatically:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/meicento/meicento-claude-code-terminal-hud/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lishtys/meicento-claude-code-terminal-hud/master/install.sh | bash
 ```
 
 ---
@@ -35,7 +35,7 @@ If you prefer to install manually:
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/meicento/meicento-claude-code-terminal-hud.git
+git clone https://github.com/lishtys/meicento-claude-code-terminal-hud.git
 cd meicento-claude-code-terminal-hud
 npm install && npm run setup
 ```

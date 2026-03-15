@@ -4,7 +4,7 @@
 set -e
 
 INSTALL_DIR="$HOME/.meicento-hud"
-REPO_URL="https://github.com/meicento/meicento-claude-code-terminal-hud.git"
+REPO_URL="https://github.com/lishtys/meicento-claude-code-terminal-hud.git"
 
 echo "🎨 正在安装 meicento-claude-code-terminal-hud..."
 
