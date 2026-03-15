@@ -1,18 +1,33 @@
 {
-  "name": "claude-hud",
+  "name": "meicento-claude-code-terminal-hud",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "description": "A refined, Gruvbox-themed Claude Code status line HUD.",
+  "main": "src/index.ts",
+  "bin": {
+    "meicento-hud": "src/index.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "setup": "npx tsx scripts/setup.ts"
+  },
+  "keywords": [
+    "claude-code",
+    "hud",
+    "status-line",
+    "terminal",
+    "gruvbox"
+  ],
+  "author": "meicento",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "picocolors": "^1.1.1"
+  },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
   }
 }

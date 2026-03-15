@@ -1,90 +1,161 @@
 #!/usr/bin/env tsx
-import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
-import * as path from 'path';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import * as path from 'node:path';
+import pc from 'picocolors';
 
-// --- CONFIGURATION & THEME (Gruvbox Dark) ---
-const COLORS = {
-  bg: '\x1b[48;2;40;40;40m', // bg0
-  fg: '\x1b[38;2;235;219;178m', // fg0
-  red: '\x1b[38;2;251;73;52m',
-  green: '\x1b[38;2;184;187;38m',
-  yellow: '\x1b[38;2;250;189;47m',
-  blue: '\x1b[38;2;131;165;152m',
-  purple: '\x1b[38;2;211;134;155m',
-  aqua: '\x1b[38;2;142;192;124m',
-  gray: '\x1b[38;2;146;131;116m',
-  reset: '\x1b[0m',
+/**
+ * MEICENTO Claude Code Terminal HUD
+ * 
+ * Inspired by:
+ * - OMC (Open Model Context)
+ * - rathi-prashant/claude-code-terminal-pro
+ * - AndyShaman/claude-statusline
+ */
+
+// --- GRUVBOX COLOR PALETTE ---
+const GRUVBOX = {
+  bg: '#282828',
+  fg: '#ebdbb2',
+  red: '#fb4934',
+  green: '#b8bb26',
+  yellow: '#fabd2f',
+  blue: '#83a598',
+  purple: '#d3869b',
+  aqua: '#8ec07c',
+  orange: '#fe8019',
+  gray: '#928374',
 };
 
-// --- UTILS ---
-function getGitBranch() {
+// Map color to picocolors if supported, else use hex (some terminals support hex/rgb)
+const c = {
+  model: (s: string) => pc.bold(pc.blue(s)),
+  token: (s: string) => pc.cyan(s),
+  dir: (s: string) => pc.magenta(s),
+  git: (s: string) => pc.yellow(s),
+  time: (s: string) => pc.green(s),
+  mcp: (s: string) => pc.red(s),
+  gray: (s: string) => pc.gray(s),
+  bar_low: (s: string) => pc.green(s),
+  bar_mid: (s: string) => pc.yellow(s),
+  bar_high: (s: string) => pc.red(s),
+};
+
+// --- ICONS ---
+const ICONS = {
+  model: '󰚩',   // Robot icon
+  token: '󰌠',   // Chip icon
+  dir: '󰉖',     // Folder icon
+  git: '󰊢',     // Branch icon
+  time: '󱑎',    // Timer icon
+  mcp: '󰒋',     // Server/Connector icon
+  sep: '│',
+};
+
+// --- HELPERS ---
+
+function getGitBranch(): string | null {
   try {
-    return execSync('git rev-parse --abbrev-ref HEAD 2>/dev/null').toString().trim();
+    return execSync('git rev-parse --abbrev-ref HEAD 2>/dev/null', { encoding: 'utf-8' }).trim();
   } catch {
     return null;
   }
 }
 
-function getProgressBar(percentage: number, segments = 20) {
-  const filledCount = Math.round((percentage / 100) * segments);
-  const emptyCount = segments - filledCount;
-  
-  let color = COLORS.green;
-  if (percentage > 70) color = COLORS.yellow;
-  if (percentage > 90) color = COLORS.red;
-
-  const bar = color + '█'.repeat(filledCount) + COLORS.gray + '░'.repeat(emptyCount) + COLORS.reset;
-  return `[${bar}] ${color}${percentage.toFixed(1)}%${COLORS.reset}`;
-}
-
-function formatTokens(n: number) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+function formatValue(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return n.toString();
 }
 
+function renderProgressBar(percentage: number, length = 20): string {
+  const filled = Math.round((percentage / 100) * length);
+  const empty = length - filled;
+  
+  let colorFn = c.bar_low;
+  if (percentage > 70) colorFn = c.bar_mid;
+  if (percentage > 90) colorFn = c.bar_high;
+
+  const barStr = colorFn('█'.repeat(filled)) + c.gray('░'.repeat(empty));
+  return `[${barStr}] ${colorFn(percentage.toFixed(0) + '%')}`;
+}
+
 // --- MAIN ---
+
 async function main() {
   try {
-    // Claude Code pipes JSON to stdin
-    // For local testing, you can: cat test.json | tsx src/index.ts
-    const input = readFileSync(0, 'utf-8');
-    if (!input || input.trim() === '') return;
+    // Read stdin (Claude Code pipes data here)
+    const rawInput = readFileSync(0, 'utf-8');
+    if (!rawInput || rawInput.trim() === '') return;
 
     let data;
     try {
-        data = JSON.parse(input);
-    } catch (e) {
-        return;
+      data = JSON.parse(rawInput);
+    } catch (err) {
+      // In case of non-JSON input or partial reads, fail gracefully
+      return;
     }
 
-    // Extract Data
-    const model = data.model?.display_name || 'Claude';
-    const contextUsage = (data.context_window?.used_percentage || 0) * 100; // Assuming 0-1 range from JSON
-    const inputTokens = data.context_window?.total_input_tokens || 0;
-    const outputTokens = data.context_window?.total_output_tokens || 0;
+    // --- DATA EXTRACTION ---
+    
+    // Model Info
+    const model = data.model?.display_name || data.model?.id || 'Claude';
+    
+    // Context & Tokens
+    // some schemas use 0-1, others 0-100.
+    const rawPercentage = data.context_window?.used_percentage || 0;
+    const contextUsage = rawPercentage <= 1 ? rawPercentage * 100 : rawPercentage;
+    const totalInput = data.context_window?.total_input_tokens || 0;
+    const totalOutput = data.context_window?.total_output_tokens || 0;
+    
+    // Session Info
+    const duration = data.duration || null;
+    const mcpCount = data.mcp?.servers_count || 0;
+    
+    // Environment Info
     const workingDir = path.basename(process.cwd());
     const branch = getGitBranch();
 
-    // Build Status Line
-    const parts = [
-      `${COLORS.blue}󰚩 ${model}${COLORS.reset}`,
-      `${getProgressBar(contextUsage)}`,
-      `${COLORS.aqua}󰌠 ${formatTokens(inputTokens)}i/${formatTokens(outputTokens)}o${COLORS.reset}`,
-      `${COLORS.purple}󰉖 ${workingDir}${COLORS.reset}`,
-    ];
+    // --- RENDER PIECES ---
+    
+    const parts: string[] = [];
 
-    if (branch) {
-      parts.push(`${COLORS.yellow}󰊢 ${branch}${COLORS.reset}`);
+    // 1. Model
+    parts.push(`${c.model(ICONS.model + ' ' + model)}`);
+
+    // 2. Progress Bar
+    parts.push(renderProgressBar(contextUsage));
+
+    // 3. Tokens
+    parts.push(`${c.token(ICONS.token + ' ' + formatValue(totalInput) + 'i/' + formatValue(totalOutput) + 'o')}`);
+
+    // 4. Session Time (Optional)
+    if (duration) {
+      parts.push(`${c.time(ICONS.time + ' ' + duration)}`);
     }
 
-    // Output single line
-    process.stdout.write(parts.join(` ${COLORS.gray}|${COLORS.reset} `) + '
-');
+    // 5. MCP (Optional)
+    if (mcpCount > 0) {
+      parts.push(`${c.mcp(ICONS.mcp + ' ' + mcpCount)}`);
+    }
+
+    // 6. Project & Git
+    let projectPart = `${c.dir(ICONS.dir + ' ' + workingDir)}`;
+    if (branch) {
+      projectPart += ` ${c.git('(' + ICONS.git + ' ' + branch + ')')}`;
+    }
+    parts.push(projectPart);
+
+    // --- OUTPUT ---
+    
+    const separator = ` ${c.gray(ICONS.sep)} `;
+    const outputLine = parts.join(separator);
+    
+    // Output single line with a trailing space for cleaner look in some shells
+    process.stdout.write(outputLine + ' \n');
 
   } catch (err) {
-    // Fail silently to avoid messing up terminal
+    // Quiet failure to prevent terminal disruption
   }
 }
 
