@@ -1,38 +1,61 @@
 #!/bin/bash
 
-# MEICENTO HUD 一键安装脚本
+# MEICENTO HUD installer (macOS / Linux / Windows Git Bash)
 set -e
 
 INSTALL_DIR="$HOME/.meicento-hud"
 REPO_URL="https://github.com/lishtys/meicento-claude-code-terminal-hud.git"
 
-echo "🎨 正在安装 meicento-claude-code-terminal-hud..."
+echo "🎨 Installing meicento-claude-code-terminal-hud..."
 
-# 1. 检查环境
+# 0. Detect platform
+OS="$(uname -s)"
+case "$OS" in
+  MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;
+  Darwin*)              PLATFORM="macos"   ;;
+  Linux*)               PLATFORM="linux"   ;;
+  *)                    PLATFORM="unknown" ;;
+esac
+
+echo "📍 Detected platform: $PLATFORM ($OS)"
+
+# 1. Check prerequisites
 if ! command -v node &> /dev/null; then
-    echo "❌ 错误: 未找到 Node.js。请先安装 Node.js 和 npm。"
+    echo "❌ Error: Node.js not found. Please install Node.js and npm first."
     exit 1
 fi
 
-# 2. 创建安装目录并下载代码
+if ! command -v git &> /dev/null; then
+    echo "❌ Error: git not found. Please install git first."
+    exit 1
+fi
+
+echo "📍 Node.js $(node -v) | npm $(npm -v)"
+
+# 2. Clone or update
 if [ -d "$INSTALL_DIR" ]; then
-    echo "🔄 发现已安装版本，正在更新..."
+    echo "🔄 Existing installation found, updating..."
     cd "$INSTALL_DIR"
     git pull
 else
-    echo "📥 正在将源码下载到 $INSTALL_DIR..."
+    echo "📥 Cloning source to $INSTALL_DIR..."
     git clone "$REPO_URL" "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 
-# 3. 安装依赖
-echo "📦 正在安装依赖..."
+# 3. Install dependencies
+echo "📦 Installing dependencies..."
 npm install --quiet
 
-# 4. 运行自动化配置
-echo "⚙️ 正在配置 Claude Code..."
+# 4. Run setup (setup.ts handles cross-platform paths)
+echo "⚙️ Configuring Claude Code..."
 npm run setup
 
 echo ""
-echo "✨ 安装完成！"
-echo "🔄 请重启您的 Claude Code 会话以看到效果。"
+echo "✨ Installation complete!"
+echo "🔄 Please restart your Claude Code session to see the HUD."
+
+if [ "$PLATFORM" = "windows" ]; then
+    echo ""
+    echo "💡 Windows note: Paths have been auto-converted to POSIX format for Claude Code compatibility."
+fi

@@ -64,7 +64,8 @@ function getCachePath(): string {
 }
 
 function getClaudeConfigDir(): string {
-  return process.env.CLAUDE_CONFIG_DIR || join(process.env.HOME || '~', '.claude');
+  const homeDir = process.env.HOME || process.env.USERPROFILE || '~';
+  return process.env.CLAUDE_CONFIG_DIR || join(homeDir, '.claude');
 }
 
 // --- Cache Operations ---

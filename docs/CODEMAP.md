@@ -70,8 +70,9 @@ Each file exports one or more render functions that return a formatted string or
 
 | File | Purpose |
 |------|---------|
-| `scripts/setup.ts` | Reads `~/.claude/settings.json`, adds `statusLine` command pointing to `src/index.ts`. |
-| `install.sh` | One-line bash installer. Clones repo, runs npm install, runs setup. |
+| `scripts/setup.ts` | Reads `~/.claude/settings.json`, adds `statusLine` command pointing to `src/index.ts`. Auto-detects platform, converts paths to POSIX format on Windows. |
+| `install.sh` | One-line bash installer (macOS/Linux/Git Bash). Detects platform via `uname`, clones repo, runs npm install, runs setup. |
+| `install.ps1` | Windows PowerShell installer. Same flow as `install.sh` using native PowerShell commands. |
 
 ### Plugin & Commands
 
