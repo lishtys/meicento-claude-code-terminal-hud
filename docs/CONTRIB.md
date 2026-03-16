@@ -8,6 +8,12 @@ cd meicento-claude-code-terminal-hud
 npm install
 ```
 
+### Windows Notes
+
+- Use Git Bash, WSL, or PowerShell with Node.js installed
+- Paths are automatically converted to POSIX format (`C:/...`) by the setup script
+- `install.ps1` is available for PowerShell users: `irm <url> | iex`
+
 ## Available Scripts
 
 | Script | Command | Use When |

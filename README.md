@@ -102,6 +102,20 @@ Running and completed agents appear on extra lines:
 
 ## Quick Start
 
+### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lishtys/meicento-claude-code-terminal-hud/master/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/lishtys/meicento-claude-code-terminal-hud/master/install.ps1 | iex
+```
+
+### Windows (Git Bash)
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lishtys/meicento-claude-code-terminal-hud/master/install.sh | bash
 ```
@@ -113,6 +127,8 @@ git clone https://github.com/lishtys/meicento-claude-code-terminal-hud.git ~/.me
 cd ~/.meicento-hud
 npm install && npm run setup
 ```
+
+> **Note:** The setup script auto-detects your platform and generates the correct `statusLine` command with POSIX-style paths for cross-platform compatibility.
 
 ## Configuration
 

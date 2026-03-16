@@ -2,7 +2,19 @@
 
 ## Installation
 
-### One-line install
+### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lishtys/meicento-claude-code-terminal-hud/master/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/lishtys/meicento-claude-code-terminal-hud/master/install.ps1 | iex
+```
+
+### Windows (Git Bash)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lishtys/meicento-claude-code-terminal-hud/master/install.sh | bash
@@ -73,7 +85,12 @@ cat ~/.claude/settings.json | grep statusLine
 
 Should show:
 ```json
-"statusLine": {"type": "command", "command": "/usr/bin/env npx tsx /Users/<you>/.meicento-hud/src/index.ts"}
+"statusLine": {"type": "command", "command": "npx tsx /Users/<you>/.meicento-hud/src/index.ts"}
+```
+
+On Windows, the path uses forward slashes for shell compatibility:
+```json
+"statusLine": {"type": "command", "command": "npx tsx C:/Users/<you>/.meicento-hud/src/index.ts"}
 ```
 
 **Re-run setup:**
@@ -99,6 +116,20 @@ Config is read on every HUD invocation (every ~300ms). Changes to `~/.meicento-h
 ```bash
 node -e "console.log(JSON.parse(require('fs').readFileSync('$HOME/.meicento-hud/config.json','utf8')))"
 ```
+
+## Platform Notes
+
+### Windows
+
+- Paths in `statusLine.command` use forward slashes (`C:/Users/...`) for bash compatibility
+- The setup script auto-detects Windows and converts paths accordingly
+- Both Git Bash and PowerShell installation methods are supported
+- OAuth Keychain integration falls back to `~/.claude/.credentials.json` on Windows
+
+### macOS / Linux
+
+- Standard Unix paths work natively
+- OAuth credentials retrieved from macOS Keychain (`security` command) when available
 
 ## File Locations
 
