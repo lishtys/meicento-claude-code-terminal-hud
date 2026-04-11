@@ -388,10 +388,8 @@ if [ -n "$session_cost" ] && [ "$session_total" -gt 0 ] 2>/dev/null; then
   L1+=("${_cc}${session_cost}${RST} ${DIM}Σ$(fv "$session_total")${RST}")
 fi
 
-# Rate limits — skip entirely in API mode
-if [ "$is_api" = 1 ]; then
-  L1+=("${MAGENTA}[API]${RST}")
-else
+# Rate limits — completely invisible in API mode (no indicator, no data)
+if [ "$is_api" != 1 ]; then
   if [ -n "$rl_5h" ]; then
     _fh=$(printf '%.0f' "$rl_5h" 2>/dev/null)
     _fc=$(cpct "$_fh")
