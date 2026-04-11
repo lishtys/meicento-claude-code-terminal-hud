@@ -35,6 +35,8 @@ echo "📍 jq $(jq --version 2>/dev/null || echo 'ok')"
 if [ -d "$INSTALL_DIR" ]; then
   echo "🔄 Existing installation found, updating..."
   cd "$INSTALL_DIR"
+  git checkout -- . 2>/dev/null || true
+  git clean -fd 2>/dev/null || true
   git pull --ff-only
 else
   echo "📥 Cloning to $INSTALL_DIR..."
