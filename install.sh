@@ -1,61 +1,65 @@
 #!/bin/bash
-
-# MEICENTO HUD installer (macOS / Linux / Windows Git Bash)
+# ═══════════════════════════════════════════════════════════════════════════
+# MEICENTO HUD v2 Installer (macOS / Linux)
+# Shell-native — requires only bash + jq, no Node.js
+# ═══════════════════════════════════════════════════════════════════════════
 set -e
 
 INSTALL_DIR="$HOME/.meicento-hud"
 REPO_URL="https://github.com/lishtys/meicento-claude-code-terminal-hud.git"
+SETTINGS_FILE="$HOME/.claude/settings.json"
 
-echo "🎨 Installing meicento-claude-code-terminal-hud..."
+echo "🎨 Installing meicento-claude-code-terminal-hud v2..."
 
-# 0. Detect platform
+# ── Platform ──────────────────────────────────────────────────
 OS="$(uname -s)"
 case "$OS" in
-  MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;
-  Darwin*)              PLATFORM="macos"   ;;
-  Linux*)               PLATFORM="linux"   ;;
-  *)                    PLATFORM="unknown" ;;
+  Darwin*) PLATFORM="macos"   ;;
+  Linux*)  PLATFORM="linux"   ;;
+  *)       PLATFORM="$OS"     ;;
 esac
+echo "📍 Platform: $PLATFORM"
 
-echo "📍 Detected platform: $PLATFORM ($OS)"
-
-# 1. Check prerequisites
-if ! command -v node &> /dev/null; then
-    echo "❌ Error: Node.js not found. Please install Node.js and npm first."
-    exit 1
+# ── Prerequisites: bash + jq ─────────────────────────────────
+if ! command -v jq &>/dev/null; then
+  echo "❌ jq not found."
+  case "$PLATFORM" in
+    macos) echo "   Install with: brew install jq" ;;
+    linux) echo "   Install with: apt install jq  or  yum install jq" ;;
+  esac
+  exit 1
 fi
+echo "📍 jq $(jq --version 2>/dev/null || echo 'ok')"
 
-if ! command -v git &> /dev/null; then
-    echo "❌ Error: git not found. Please install git first."
-    exit 1
-fi
-
-echo "📍 Node.js $(node -v) | npm $(npm -v)"
-
-# 2. Clone or update
+# ── Clone or update ──────────────────────────────────────────
 if [ -d "$INSTALL_DIR" ]; then
-    echo "🔄 Existing installation found, updating..."
-    cd "$INSTALL_DIR"
-    git pull
+  echo "🔄 Existing installation found, updating..."
+  cd "$INSTALL_DIR"
+  git pull --ff-only
 else
-    echo "📥 Cloning source to $INSTALL_DIR..."
-    git clone "$REPO_URL" "$INSTALL_DIR"
-    cd "$INSTALL_DIR"
+  echo "📥 Cloning to $INSTALL_DIR..."
+  git clone "$REPO_URL" "$INSTALL_DIR"
+  cd "$INSTALL_DIR"
 fi
 
-# 3. Install dependencies
-echo "📦 Installing dependencies..."
-npm install --quiet
+# ── Make executable ──────────────────────────────────────────
+chmod +x "$INSTALL_DIR/statusline.sh"
 
-# 4. Run setup (setup.ts handles cross-platform paths)
-echo "⚙️ Configuring Claude Code..."
-npm run setup
+# ── Configure Claude Code settings.json ──────────────────────
+HUD_CMD="$INSTALL_DIR/statusline.sh"
+
+if [ ! -f "$SETTINGS_FILE" ]; then
+  echo "❌ Claude Code settings not found at $SETTINGS_FILE"
+  echo "   Launch Claude Code at least once first."
+  exit 1
+fi
+
+# Atomic update: jq → tmp → rename
+_tmp="${SETTINGS_FILE}.tmp.$$"
+jq --arg cmd "$HUD_CMD" '.statusLine = {"type": "command", "command": $cmd}' \
+  "$SETTINGS_FILE" > "$_tmp" && mv "$_tmp" "$SETTINGS_FILE"
 
 echo ""
-echo "✨ Installation complete!"
-echo "🔄 Please restart your Claude Code session to see the HUD."
-
-if [ "$PLATFORM" = "windows" ]; then
-    echo ""
-    echo "💡 Windows note: Paths have been auto-converted to POSIX format for Claude Code compatibility."
-fi
+echo "✅ Installation complete!"
+echo "   statusLine → $HUD_CMD"
+echo "🔄 Restart Claude Code to see the HUD."

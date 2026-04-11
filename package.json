@@ -1,6 +1,6 @@
 {
   "name": "meicento-claude-code-terminal-hud",
-  "version": "0.3.0",
+  "version": "2.0.0",
   "description": "3-line status HUD for Claude Code with rate limits, transcript parsing, and git status.",
   "main": "src/index.ts",
   "bin": {
