@@ -1,7 +1,7 @@
 {
   "name": "meicento-hud",
-  "description": "3-line status HUD for Claude Code - context health, rate limits, tool activity, agent tracking, and todo progress",
-  "version": "2.0.0",
+  "description": "Status HUD for Claude Code — context bar, native cost tracking, TPM, token counts, agent/skill stats, git status. Pure bash + jq.",
+  "version": "2.1.0",
   "author": {
     "name": "meicento",
     "url": "https://github.com/lishtys"
@@ -9,18 +9,13 @@
   "homepage": "https://github.com/lishtys/meicento-claude-code-terminal-hud",
   "repository": "https://github.com/lishtys/meicento-claude-code-terminal-hud",
   "license": "MIT",
-  "commands": [
-    "./commands/setup.md",
-    "./commands/configure.md"
-  ],
   "keywords": [
     "statusline",
     "hud",
     "monitoring",
-    "rate-limits",
-    "tools",
+    "cost",
+    "tokens",
     "agents",
-    "todos",
     "git",
     "context"
   ]

@@ -5,23 +5,22 @@
     "email": ""
   },
   "metadata": {
-    "description": "3-line status HUD with OAuth rate limits, transcript parsing, git status, config counts, and widget toggles",
-    "version": "2.0.0"
+    "description": "Status HUD for Claude Code — context bar, native cost tracking, TPM, token counts, agent/skill stats, git status. Pure bash + jq.",
+    "version": "2.1.0"
   },
   "plugins": [
     {
       "name": "meicento-hud",
       "source": "./",
-      "description": "3-line status line: session (model, context bar, tokens, rate limits), stats (thinking, skills, call counts, todos), project (directory, git branch, config counts, session timer). Features OAuth usage API, JSONL transcript parsing, and interactive /configure command.",
+      "description": "Multi-line status line: session (model, context dot bar, tokens, rate limits, team mode), cost (native USD with burn rate, TPM), stats (tool/agent/skill counts, cache breakdown, todos), project (directory:branch, duration). Pure bash + jq, no Node.js required.",
       "category": "monitoring",
       "tags": [
         "statusline",
         "hud",
         "monitoring",
-        "rate-limits",
-        "tools",
+        "cost",
+        "tokens",
         "agents",
-        "todos",
         "git",
         "context"
       ]
