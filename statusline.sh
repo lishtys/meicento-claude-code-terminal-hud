@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════
-# MEICENTO Claude Code Statusline v2.0
-# Shell rewrite — high performance, token counting, cost tracking
+# MEICENTO Claude Code Statusline v2.1
+# Pure bash + jq — native cost, TPM, dot-matrix context bar
 # ═══════════════════════════════════════════════════════════════════════════
 #
 # Features:
-#   ✦ CHEN MI Braille dot-matrix context bar (6-tier color)
+#   ✦ Context bar with 6-tier color (◖◗ half-circle dots)
+#   ✦ Native cost from Claude Code (cost.total_cost_usd) + burn rate ($/h)
+#   ✦ TPM (tokens per minute) throughput
 #   ✦ Token counting: input / output / cache_write / cache_read
-#   ✦ Session cost calculation (model-aware Anthropic pricing)
-#   ✦ API mode detection — skips usage display for API keys
+#   ✦ Fallback cost calculation when native cost unavailable
+#   ✦ API mode detection — hides rate limits for API keys
 #   ✦ Team mode indicator
 #   ✦ Git branch + dirty state
 #   ✦ Tool / agent / skill call counts from transcript
@@ -67,15 +69,19 @@ mkdir -p "$CACHE_DIR" 2>/dev/null
 
 sep() { printf " ${DIM}│${RST} "; }
 
-# Format token value: 1234567→1.2M  12345→12K  999→999
+# Format token value: always with unit  1234567→1.2M  12345→12K  328→0.3K  0→0
 fv() {
   local n=${1:-0}
   if [ "$n" -ge 950000 ] 2>/dev/null; then
     awk "BEGIN{printf \"%.1fM\",$n/1000000}"
-  elif [ "$n" -ge 1000 ] 2>/dev/null; then
+  elif [ "$n" -ge 10000 ] 2>/dev/null; then
     printf '%dK' "$(( n / 1000 ))"
-  else
+  elif [ "$n" -ge 100 ] 2>/dev/null; then
+    awk "BEGIN{printf \"%.1fK\",$n/1000}"
+  elif [ "$n" -gt 0 ] 2>/dev/null; then
     printf '%d' "$n"
+  else
+    printf '0'
   fi
 }
 
@@ -154,6 +160,7 @@ input=$(cat)
 # Defaults
 model_display="Claude" model_id="" ctx_pct_raw="" ctx_input=0 ctx_output=0
 duration="" mcp_count=0 transcript_path="" rl_5h="" rl_wk="" rl_wk_reset="" work_dir=""
+cost_usd="" cost_duration_ms=""
 
 eval "$(jq -r '
   "model_display=" + ((.model.display_name // "Claude") | @sh),
@@ -167,7 +174,9 @@ eval "$(jq -r '
   "rl_5h="         + (if .rate_limits.five_hour_percent != null then (.rate_limits.five_hour_percent | tostring) else "" end | @sh),
   "rl_wk="         + (if .rate_limits.weekly_percent != null then (.rate_limits.weekly_percent | tostring) else "" end | @sh),
   "rl_wk_reset="   + ((.rate_limits.weekly_resets_at // "") | @sh),
-  "work_dir="      + ((.workspace.current_dir // .cwd // "") | @sh)
+  "work_dir="      + ((.workspace.current_dir // .cwd // "") | @sh),
+  "cost_usd="      + (if .cost.total_cost_usd != null then (.cost.total_cost_usd | tostring) else "" end | @sh),
+  "cost_duration_ms=" + (if .cost.total_duration_ms != null then (.cost.total_duration_ms | tostring) else "" end | @sh)
 ' <<< "$input")" 2>/dev/null || true
 
 # Normalize context percentage (handle both 0–1 and 0–100 ranges)
@@ -259,22 +268,39 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# COST CALCULATION
+# COST + TOKEN TOTALS
 # ═══════════════════════════════════════════════════════════════════════════
 
-session_cost="" session_total=0 cost_raw=0
+session_cost="" cost_raw=0 cost_per_hour="" tok_total=0 tok_per_min=""
 
-if [ "$has_transcript" = 1 ] && [ "$(( t_ti + t_to ))" -gt 0 ]; then
-  session_total=$(( t_ti + t_to + t_cw + t_cr ))
+# Token totals: prefer context_window fields (always available), enrich with transcript
+tok_total=$(( ctx_input + ctx_output ))
+if [ "$has_transcript" = 1 ] && [ "$(( t_ti + t_to ))" -gt "$tok_total" ]; then
+  tok_total=$(( t_ti + t_to + t_cw + t_cr ))
+fi
 
-  # Pricing per MTok (Anthropic standard rates)
+# Cost: prefer native cost.total_cost_usd from Claude Code, fallback to manual calc
+if [ -n "$cost_usd" ]; then
+  cost_raw="$cost_usd"
+  session_cost=$(awk "BEGIN{
+    c=$cost_usd
+    if(c>=10)     printf \"\$%.1f\",c
+    else if(c>=1) printf \"\$%.2f\",c
+    else if(c>0)  printf \"\$%.3f\",c
+    else          printf \"\$0.00\"
+  }")
+  # Burn rate: $/hour
+  if [ -n "$cost_duration_ms" ] && awk "BEGIN{exit !($cost_duration_ms > 0)}" 2>/dev/null; then
+    cost_per_hour=$(awk "BEGIN{printf \"%.2f\", $cost_usd * 3600000 / $cost_duration_ms}")
+  fi
+elif [ "$has_transcript" = 1 ] && [ "$(( t_ti + t_to ))" -gt 0 ]; then
+  # Fallback: manual calculation from transcript tokens
   case "$model_id" in
     *opus*)   _ip=15;   _op=75;   _cwp=18.75; _crp=1.50  ;;
     *sonnet*) _ip=3;    _op=15;   _cwp=3.75;  _crp=0.30  ;;
     *haiku*)  _ip=0.80; _op=4;    _cwp=1.00;  _crp=0.08  ;;
     *)        _ip=3;    _op=15;   _cwp=3.75;  _crp=0.30  ;;
   esac
-
   cost_raw=$(awk "BEGIN{printf \"%.6f\",($t_ti*$_ip+$t_to*$_op+$t_cw*$_cwp+$t_cr*$_crp)/1000000}")
   session_cost=$(awk "BEGIN{
     c=$cost_raw
@@ -285,69 +311,35 @@ if [ "$has_transcript" = 1 ] && [ "$(( t_ti + t_to ))" -gt 0 ]; then
   }")
 fi
 
+# TPM: tokens per minute from cost.total_duration_ms
+if [ "$tok_total" -gt 0 ] 2>/dev/null && [ -n "$cost_duration_ms" ] && \
+   awk "BEGIN{exit !($cost_duration_ms > 0)}" 2>/dev/null; then
+  tok_per_min=$(awk "BEGIN{printf \"%.0f\", $tok_total * 60000 / $cost_duration_ms}")
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════
-# CHEN MI BRAILLE BAR
+# CONTEXT BAR: half-circle dots ◖◗, 10 cells (5 pairs, half-step precision)
 # ═══════════════════════════════════════════════════════════════════════════
 
-render_chen_mi() {
+render_bar() {
   local pct=${1:-0}
-
-  # Braille characters (UTF-8 encoded)
-  local BCL=$'\xe2\xa3\x8f'  # ⣏  C-left
-  local BSR=$'\xe2\xa3\x89'  # ⣉  serifs
-  local BEP=$'\xe2\xa0\x80'  # ⠀  empty
-  local BLV=$'\xe2\xa1\x87'  # ⡇  left vertical
-  local BRV=$'\xe2\xa2\xb8'  # ⢸  right vertical
-  local BCR=$'\xe2\xa0\xb6'  # ⠶  double crossbar
-  local BEM=$'\xe2\xa3\x9b'  # ⣛  E-middle
-  local BND=$'\xe2\xa2\xa3'  # ⢣  N-diagonal
-  local BML=$'\xe2\xa0\x99'  # ⠙  M-peak-left
-  local BMR=$'\xe2\xa0\x8b'  # ⠋  M-peak-right
-
-  # CHEN MI: C(3) H(3) E(3) N(3) space(1) M(4) I(2) = 19
-  local CHARS=(
-    "$BCL" "$BSR" "$BEP"
-    "$BLV" "$BCR" "$BRV"
-    "$BLV" "$BEM" "$BEP"
-    "$BLV" "$BND" "$BRV"
-    "$BEP"
-    "$BLV" "$BML" "$BMR" "$BRV"
-    "$BSR" "$BCR"
-  )
-  local INK=(1 1 0  1 1 1  1 1 0  1 1 1  0  1 1 1 1  1 1)
-
-  local CW=19 PAD=2
-  local BW=$(( PAD + CW + PAD ))
-  local filled; filled=$(awk "BEGIN{printf \"%d\", $pct / 100 * $BW + 0.5}")
+  local WIDTH=10
+  local filled; filled=$(awk "BEGIN{printf \"%d\", $pct / 100 * $WIDTH + 0.5}")
 
   local bar_color; bar_color=$(c6 "$pct")
-  local result="${DIM}[${RST}"
+  local result=""
 
-  local i ci ink ch
-  for (( i=0; i<BW; i++ )); do
-    ci=$(( i - PAD ))
-    if (( ci < 0 || ci >= CW )); then
-      ink=0; ch="$BEP"
+  local i
+  for (( i=0; i<WIDTH; i++ )); do
+    if (( i % 2 == 0 )); then
+      if (( i < filled )); then result+="${bar_color}◖${RST}"
+      else result+="${DIM}◌${RST}"; fi
     else
-      ink=${INK[$ci]}; ch="${CHARS[$ci]}"
-    fi
-
-    if (( i < filled )); then
-      if (( ink == 1 )); then
-        result+="${CYAN}${ch}${RST}"
-      else
-        result+="${bar_color}█${RST}"
-      fi
-    else
-      if (( ink == 1 )); then
-        result+="${BWHITE}${ch}${RST}"
-      else
-        result+="${DIM}${BEP}${RST}"
-      fi
+      if (( i < filled )); then result+="${bar_color}◗${RST}"
+      else result+="${DIM}◌${RST}"; fi
     fi
   done
 
-  result+="${DIM}]${RST}"
   printf '%s' "$result"
 }
 
@@ -359,34 +351,18 @@ L1=()
 
 # Model
 _mname=$(smodel "$model_id" "$model_display")
-L1+=("${CYAN}🤖 ${_mname}${RST}")
+L1+=("${CYAN}${_mname}${RST}")
 
 # CHEN MI context bar + percentage
 if [ -n "$ctx_pct_raw" ]; then
-  _bar=$(render_chen_mi "$ctx_pct")
+  _bar=$(render_bar "$ctx_pct")
   _pc=$(c6 "$ctx_pct")
   L1+=("${_bar} ${_pc}${ctx_pct}%${RST}")
 fi
 
-# Tokens: last request or context window fallback
-if [ "$has_transcript" = 1 ] && [ "$(( t_li + t_lo ))" -gt 0 ]; then
-  _tok="i$(fv "$t_li")/o$(fv "$t_lo")"
-  [ "$t_lr" -gt 0 ] 2>/dev/null && _tok+=" r$(fv "$t_lr")"
-else
-  _tok="i$(fv "$ctx_input")/o$(fv "$ctx_output")"
-fi
-# Append cache tokens if present
-if [ "$t_cw" -gt 0 ] 2>/dev/null || [ "$t_cr" -gt 0 ] 2>/dev/null; then
-  [ "$t_cw" -gt 0 ] 2>/dev/null && _tok+=" ${DIM}cw$(fv "$t_cw")${RST}"
-  [ "$t_cr" -gt 0 ] 2>/dev/null && _tok+=" ${DIM}cr$(fv "$t_cr")${RST}"
-fi
+# Tokens: context window totals (native from Claude Code)
+_tok="in:$(fv "$ctx_input")/out:$(fv "$ctx_output")"
 L1+=("$_tok")
-
-# Cost + session total
-if [ -n "$session_cost" ] && [ "$session_total" -gt 0 ] 2>/dev/null; then
-  _cc=$(ccost "$cost_raw")
-  L1+=("${_cc}${session_cost}${RST} ${DIM}Σ$(fv "$session_total")${RST}")
-fi
 
 # Rate limits — completely invisible in API mode (no indicator, no data)
 if [ "$is_api" != 1 ]; then
@@ -410,43 +386,76 @@ fi
 [ "$is_team" = 1 ] && L1+=("${BOLD}${MAGENTA}[TEAM]${RST}")
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LINE 2: STATS (only if transcript data)
+# LINE 2: COST + CACHE + STATS
 # ═══════════════════════════════════════════════════════════════════════════
 
 L2=()
-if [ "$has_transcript" = 1 ]; then
-  # Tool / agent / skill counts
-  if [ "$t_tc" -gt 0 ] 2>/dev/null; then
-    _counts="${DIM}T:${t_tc}${RST}"
-    [ "$t_ac" -gt 0 ] 2>/dev/null && _counts+=" ${DIM}A:${t_ac}${RST}"
-    [ "$t_sc" -gt 0 ] 2>/dev/null && _counts+=" ${DIM}S:${t_sc}${RST}"
-    L2+=("$_counts")
-  fi
 
-  # Todo progress
+# Cost (with burn rate if available)
+if [ -n "$session_cost" ]; then
+  _cc=$(ccost "$cost_raw")
+  _cost_str="${_cc}${session_cost}${RST}"
+  if [ -n "$cost_per_hour" ]; then
+    _cost_str+=" ${DIM}(${_cc}\$${cost_per_hour}/h${RST}${DIM})${RST}"
+  fi
+  L2+=("$_cost_str")
+fi
+
+# Total tokens + TPM
+if [ "$tok_total" -gt 0 ] 2>/dev/null; then
+  _tdisp="$(fv "$tok_total") tok"
+  [ -n "$tok_per_min" ] && _tdisp+=" ($(fv "$tok_per_min") tpm)"
+  L2+=("${DIM}${_tdisp}${RST}")
+fi
+
+# Cache breakdown
+if [ "$has_transcript" = 1 ]; then
+  _stok=""
+  [ "$t_cw" -gt 0 ] 2>/dev/null && _stok+="cw:$(fv "$t_cw")"
+  if [ "$t_cr" -gt 0 ] 2>/dev/null; then
+    [ -n "$_stok" ] && _stok+=" "
+    _stok+="cr:$(fv "$t_cr")"
+  fi
+  [ -n "$_stok" ] && L2+=("${DIM}${_stok}${RST}")
+
+  # Tool counts + todo progress
+  if [ "$t_tc" -gt 0 ] 2>/dev/null; then
+    L2+=("${DIM}T:${t_tc}${RST}")
+  fi
   if [ "$t_tt" -gt 0 ] 2>/dev/null; then
-    L2+=("▸ ${t_td}/${t_tt}")
+    L2+=("${DIM}todo:${t_td}/${t_tt}${RST}")
   fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LINE 3: PROJECT
+# LINE 3: AGENTS (only if agents or skills exist)
 # ═══════════════════════════════════════════════════════════════════════════
 
-L3=()
+LA=()
+if [ "$has_transcript" = 1 ]; then
+  [ "$t_ac" -gt 0 ] 2>/dev/null && LA+=("${DIM}Agents:${t_ac}${RST}")
+  [ "$t_sc" -gt 0 ] 2>/dev/null && LA+=("${DIM}Skills:${t_sc}${RST}")
+  [ "$mcp_count" -gt 0 ] 2>/dev/null && LA+=("${DIM}MCP:${mcp_count}${RST}")
+fi
 
-# Directory + git
+# ═══════════════════════════════════════════════════════════════════════════
+# LINE 4: PROJECT
+# ═══════════════════════════════════════════════════════════════════════════
+
+LP=()
+
+# Directory + git (compact)
 if [ -n "$work_dir" ]; then
   _dir=$(basename "$work_dir")
-  _ds="${YELLOW}📁 ${_dir}${RST}"
   if [ -n "$git_branch" ]; then
-    _ds+=" ${MAGENTA}git:(${CYAN}${git_branch}${git_dirty}${MAGENTA})${RST}"
+    LP+=("${YELLOW}${_dir}${RST}${DIM}:${RST}${CYAN}${git_branch}${git_dirty}${RST}")
+  else
+    LP+=("${YELLOW}${_dir}${RST}")
   fi
-  L3+=("$_ds")
 fi
 
 # Duration
-[ -n "$duration" ] && L3+=("${DIM}⏱️  ${duration}${RST}")
+[ -n "$duration" ] && LP+=("${DIM}${duration}${RST}")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # OUTPUT
@@ -465,9 +474,13 @@ if [ ${#L2[@]} -gt 0 ]; then
   out+=$'\n'
   out+=$(join_parts "${L2[@]}")
 fi
-if [ ${#L3[@]} -gt 0 ]; then
+if [ ${#LA[@]} -gt 0 ]; then
   out+=$'\n'
-  out+=$(join_parts "${L3[@]}")
+  out+=$(join_parts "${LA[@]}")
+fi
+if [ ${#LP[@]} -gt 0 ]; then
+  out+=$'\n'
+  out+=$(join_parts "${LP[@]}")
 fi
 
 printf '%s\n' "$out"
